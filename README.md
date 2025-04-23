@@ -52,13 +52,35 @@ This project sets up a complete EKS infrastructure with the following components
 
 ### 1. Configure your variables
 
-Edit the `terraform.tfvars` file to set your specific variables:
+The project uses the following configuration values in `terraform.tfvars`:
 
 ```hcl
-region = "us-west-2"
-cluster_name = "my-eks-cluster"
-# Add other variables specific to your environment
+domain_name = "your-domain.com" 
+certificate_arn = "arn:aws:acm:region:account-id:certificate/certificate-id"
+region = "us-east-1"
+
+# Additional configuration values with defaults from variables.tf
+vpc_cidr_block = "10.16.0.0/16"
+prefix = "pills"
+cluster_version = "1.27"
+cluster_endpoint_private_access = true
+cluster_endpoint_public_access = true
+
+# EKS Managed Node Groups configuration
+eks_managed_node_groups = {
+  main = {
+    desired_size = 2
+    min_size     = 1
+    max_size     = 2
+    instance_types = ["t3.medium"]
+  }
+}
+
+# OIDC Provider Configuration
+eks_oidc_root_ca_thumbprint = "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
 ```
+
+Edit this file to customize the configuration for your environment.
 
 ### 2. Initialize Terraform
 
