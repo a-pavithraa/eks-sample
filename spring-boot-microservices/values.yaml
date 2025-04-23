@@ -1,0 +1,76 @@
+# Default values for spring-boot-microservices
+dockerhubusername: pavithravasudevan
+certificateArn:
+domainName: 
+
+# Database Configuration
+dbName: postgres
+dbUserName: postgres
+password: postgres
+
+# Service Configuration
+services:
+  catalog:
+    replicaCount: 1
+    resources:
+      limits:
+        memory: "700Mi"
+      requests:
+        memory: "512Mi"
+  order:
+    replicaCount: 1
+    resources:
+      limits:
+        memory: "700Mi"
+      requests:
+        memory: "512Mi"
+  notification:
+    replicaCount: 1
+    resources:
+      limits:
+        memory: "700Mi"
+      requests:
+        memory: "512Mi"
+  apiGateway:
+    replicaCount: 1
+    resources:
+      limits:
+        memory: "700Mi"
+      requests:
+        memory: "512Mi"
+
+# Infrastructure Configuration
+infrastructure:
+  databases:
+    resources:
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+  rabbitmq:
+    resources:
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+  mailhog:
+    resources:
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+
+# Credentials
+credentials:
+  postgres:
+    username: postgres
+    password: postgres
+  rabbitmq:
+    username: guest
+    password: guest

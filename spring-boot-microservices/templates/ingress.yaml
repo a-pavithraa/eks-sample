@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bookstore-ingress
+  annotations:
+   
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.certificateArn }}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    external-dns.alpha.kubernetes.io/hostname: {{ printf "webapp.%s,mailhog.%s" .Values.domainName .Values.domainName }}
+spec:
+  ingressClassName: alb
+  rules:
+  - host: {{ printf "webapp.%s" .Values.domainName }}
+    http:
+      paths:
+      - path: "/"
+        pathType: Prefix
+        backend:
+          service:
+            name: bookstore-webapp
+            port:
+              number: 8080
+  - host: {{ printf "mailhog.%s" .Values.domainName }}
+    http:
+      paths:
+      - path: "/"
+        pathType: Prefix
+        backend:
+          service:
+            name: mailhog
+            port:
+              number: 8025

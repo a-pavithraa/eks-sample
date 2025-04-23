@@ -1,0 +1,338 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  CATALOG_SERVICE_URL: "http://catalog-service:8081"
+  ORDER_SERVICE_URL: "http://order-service:8082"
+  MANAGEMENT_TRACING_ENABLED: "true"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://tempo:9411"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-service-config
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+data:
+  DB_URL: "jdbc:postgresql://catalog-db:5432/postgres"
+  DB_USER: {{ .Values.credentials.postgres.username | quote }}
+  DB_PASSWORD: {{ .Values.credentials.postgres.password | quote }}
+  SWAGGER_API_GATEWAY_URL: "http://api-gateway:8989/catalog"
+  MANAGEMENT_TRACING_ENABLED: "true"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://tempo:9411"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.catalog.replicaCount }}
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+      - name: catalog-service
+        imagePullPolicy: Always
+       
+        image: {{ .Values.dockerhubusername }}/bookstore-catalog-service
+        ports:
+        - containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: catalog-service-config
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: catalog-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  ORDERS_CATALOG_SERVICE_URL: "http://api-gateway:8989/catalog"
+  DB_URL: "jdbc:postgresql://orders-db:5432/postgres"
+  DB_USERNAME: {{ .Values.credentials.postgres.username | quote }}
+  DB_PASSWORD: {{ .Values.credentials.postgres.password | quote }}
+  RABBITMQ_HOST: "bookstore-rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USERNAME: {{ .Values.credentials.rabbitmq.username | quote }}
+  RABBITMQ_PASSWORD: {{ .Values.credentials.rabbitmq.password | quote }}
+  OAUTH2_SERVER_URL: "http://keycloak:9191"
+  SWAGGER_API_GATEWAY_URL: "http://api-gateway:8989/orders"
+  MANAGEMENT_TRACING_ENABLED: "true"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://tempo:9411"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.order.replicaCount }}
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: {{ .Values.dockerhubusername }}/bookstore-order-service
+        imagePullPolicy: Always
+       
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: order-service-config
+        
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: order-service
+  ports:
+  - protocol: TCP
+    port: 8082
+    targetPort: 8082
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-service-config
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  DB_URL: "jdbc:postgresql://notifications-db:5432/postgres"
+  DB_USERNAME: {{ .Values.credentials.postgres.username | quote }}
+  DB_PASSWORD: {{ .Values.credentials.postgres.password | quote }}
+  RABBITMQ_HOST: "bookstore-rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USERNAME: {{ .Values.credentials.rabbitmq.username | quote }}
+  RABBITMQ_PASSWORD: {{ .Values.credentials.rabbitmq.password | quote }}
+  MAIL_HOST: "mailhog"
+  MAIL_PORT: "1025"
+  MANAGEMENT_TRACING_ENABLED: "true"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://tempo:9411"
+  notification.kubernetes-profile: "Y"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.notification.replicaCount }}
+  serviceAccountName: ses-access
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: {{ .Values.dockerhubusername }}/bookstore-notification-service
+        ports:
+        - containerPort: 8083
+        envFrom:
+        - configMapRef:
+            name: notification-service-config
+        
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: notification-service
+  ports:
+  - protocol: TCP
+    port: 8083
+    targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.apiGateway.replicaCount }}
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: {{ .Values.dockerhubusername }}/bookstore-api-gateway
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8989
+        envFrom:
+        - configMapRef:
+            name: api-gateway-config
+        {{- include "spring-boot-microservices.resources" .Values.services.apiGateway.resources | nindent 8 }}
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8989
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8989
+          initialDelaySeconds: 30
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - protocol: TCP
+    port: 8989
+    targetPort: 8989 
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-webapp
+  labels:
+    app: bookstore-webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-webapp
+  template:
+    metadata:
+      labels:
+        app: bookstore-webapp
+    spec:
+      containers:
+      - name: bookstore-webapp
+        image: {{.Values.dockerhubusername}}/bookstore-webapp
+        imagePullPolicy: Always
+        {{- include "spring-boot-microservices.resources" .Values.services.apiGateway.resources | nindent 8 }}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "docker"
+        - name: BOOKSTORE_API_GATEWAY_URL
+          value: "http://api-gateway:8989"
+        - name: OAUTH2_SERVER_URL
+          value: "http://localhost:32352"
+        - name: MANAGEMENT_TRACING_ENABLED
+          value: "true"
+        - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+          value: "http://tempo:9411"
+        - name: spring.security.oauth2.client.registration.bookstore-webapp.redirect-uri
+          value: "https://webapp.pvsandbox.in/login/oauth2/code/cognito"
+        resources:
+          limits:
+            memory: "700Mi"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-webapp
+
+spec:
+  type: NodePort
+  selector:
+    app: bookstore-webapp
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    nodePort: 30569

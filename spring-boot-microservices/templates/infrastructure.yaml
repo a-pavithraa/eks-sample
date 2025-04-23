@@ -1,0 +1,151 @@
+{{- define "spring-boot-microservices.resources" -}}
+resources:
+  limits:
+    memory: {{ .memory | default "512Mi" }}
+    cpu: {{ .cpu | default "500m" }}
+  requests:
+    memory: {{ .memory | default "256Mi" }}
+    cpu: {{ .cpu | default "250m" }}
+{{- end }}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spring-boot-microservices-config
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+data:
+  POSTGRES_DB: {{ .Values.dbName }}
+  POSTGRES_USER: {{ .Values.dbUserName }}
+  POSTGRES_PASSWORD: {{ .Values.password }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-db
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-db
+  template:
+    metadata:
+      labels:
+        app: catalog-db
+    spec:
+      containers:
+      - name: catalog-db
+        image: postgres:16-alpine
+        envFrom:
+          - configMapRef:
+              name: spring-boot-microservices-config
+        ports:
+        - containerPort: 5432
+        {{- include "spring-boot-microservices.resources" .Values.infrastructure.databases.resources | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-db
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-db
+  template:
+    metadata:
+      labels:
+        app: orders-db
+    spec:
+      containers:
+      - name: orders-db
+        image: postgres:16-alpine
+        envFrom:
+          - configMapRef:
+              name: spring-boot-microservices-config
+        ports:
+        - containerPort: 5432
+        {{- include "spring-boot-microservices.resources" .Values.infrastructure.databases.resources | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-db
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications-db
+  template:
+    metadata:
+      labels:
+        app: notifications-db
+    spec:
+      containers:
+      - name: notifications-db
+        image: postgres:16-alpine
+        envFrom:
+          - configMapRef:
+              name: spring-boot-microservices-config
+        ports:
+        - containerPort: 5432
+        {{- include "spring-boot-microservices.resources" .Values.infrastructure.databases.resources | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-rabbitmq
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: bookstore-rabbitmq
+    spec:
+      containers:
+      - name: bookstore-rabbitmq
+        image: rabbitmq:3.12.11-management
+        env:
+          - name: RABBITMQ_USERNAME
+            value: guest
+          - name: RABBITMQ_PASSWORD
+            value: guest
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+        {{- include "spring-boot-microservices.resources" .Values.infrastructure.rabbitmq.resources | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailhog
+  labels:
+    {{- include "spring-boot-microservices.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mailhog
+  template:
+    metadata:
+      labels:
+        app: mailhog
+    spec:
+      containers:
+      - name: mailhog
+        image: 'jcalonso/mailhog:latest'
+        ports:
+        - containerPort: 1025
+        - containerPort: 8025
+        {{- include "spring-boot-microservices.resources" .Values.infrastructure.mailhog.resources | nindent 8 }} 
