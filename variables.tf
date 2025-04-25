@@ -63,3 +63,8 @@ variable "certificate_arn" {
   type        = string
   
 }
+variable "default_email" {
+  description = "Default email address for notifications"
+  type        = string
+  default     = ""
+  }

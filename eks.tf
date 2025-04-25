@@ -8,7 +8,7 @@ module "eks" {
   cluster_endpoint_public_access  = var.cluster_endpoint_public_access
 
   vpc_id     = module.vpc_eks.vpc_id
-  subnet_ids = module.vpc_eks.private_subnets
+  subnet_ids = module.vpc_eks.public_subnets
 
   eks_managed_node_groups = {
     for name, group in var.eks_managed_node_groups : name => {

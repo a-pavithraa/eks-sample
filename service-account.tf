@@ -14,7 +14,7 @@ resource "aws_iam_role" "ses_access" {
         Condition = {
           StringEquals = {
             "${module.eks.oidc_provider}:aud" : "sts.amazonaws.com",
-            "${module.eks.oidc_provider}:sub" : "system:serviceaccount:ses-access:ses-access"
+            "${module.eks.oidc_provider}:sub" : "system:serviceaccount:default:ses-access"
           }
         }
       }

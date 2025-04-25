@@ -159,9 +159,12 @@ data:
   RABBITMQ_PASSWORD: {{ .Values.credentials.rabbitmq.password | quote }}
   MAIL_HOST: "mailhog"
   MAIL_PORT: "1025"
+  EMAIL_ID: {{.Values.email | quote }}
   MANAGEMENT_TRACING_ENABLED: "true"
   MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://tempo:9411"
   notification.kubernetes-profile: "Y"
+  notification.support-email: {{.Values.email | quote }}
+  notification.recipient-default-email: {{.Values.email | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -170,8 +173,7 @@ metadata:
   labels:
     {{- include "spring-boot-microservices.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.services.notification.replicaCount }}
-  serviceAccountName: ses-access
+  replicas: {{ .Values.services.notification.replicaCount }}  
   selector:
     matchLabels:
       app: notification-service
@@ -180,9 +182,12 @@ spec:
       labels:
         app: notification-service
     spec:
+      serviceAccountName: ses-access
       containers:
       - name: notification-service
         image: {{ .Values.dockerhubusername }}/bookstore-notification-service
+        imagePullPolicy: Always
+      
         ports:
         - containerPort: 8083
         envFrom:
@@ -326,9 +331,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: bookstore-webapp
+  annotations:    
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
 
 spec:
-  type: NodePort
+  type: NodePort  
   selector:
     app: bookstore-webapp
   ports:

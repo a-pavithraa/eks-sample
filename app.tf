@@ -1,11 +1,20 @@
 resource "helm_release" "shikshaapp" {
   name              = "springbootmicroservices"
   chart             = "${path.module}/spring-boot-microservices"
-  values = {
-    domain_name = var.domain_name
-    certificate_arn = var.certificate_arn
-    region = var.region
+  set {
+    name  = "domainName"
+    value = var.domain_name
   }
-  
- 
+  set {
+    name  = "certificateArn"
+    value = var.certificate_arn
+  }
+  set {
+    name  = "region"
+    value = var.region
+  }
+  set {
+    name  = "email"
+    value = var.default_email
+  }
 }

@@ -1,7 +1,8 @@
 # Default values for spring-boot-microservices
 dockerhubusername: pavithravasudevan
-certificateArn:
+certificateArn: 
 domainName: 
+email: 
 
 # Database Configuration
 dbName: postgres

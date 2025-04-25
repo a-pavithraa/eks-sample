@@ -47,6 +47,8 @@ This project sets up a complete EKS infrastructure with the following components
 - Terraform v1.0.0 or newer
 - kubectl v1.20.0 or newer
 - Helm v3.0.0 or newer
+- Cognito User Pool configured (Refer to [AWS Cognito Documentation](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html))
+- AWS SES configured (Refer to [AWS SES Documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/Welcome.html))
 
 ## Getting Started
 
@@ -58,7 +60,7 @@ The project uses the following configuration values in `terraform.tfvars`:
 domain_name = "your-domain.com" 
 certificate_arn = "arn:aws:acm:region:account-id:certificate/certificate-id"
 region = "us-east-1"
-
+default_email = "email id verified in aws ses"
 # Additional configuration values with defaults from variables.tf
 vpc_cidr_block = "10.16.0.0/16"
 prefix = "pills"
